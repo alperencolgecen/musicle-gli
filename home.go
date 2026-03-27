@@ -199,6 +199,11 @@ func (h *HomePage) buildContent() *tview.Flex {
 	h.songTable.SetFixed(1, 0)
 	h.buildSongTable()
 
+	// Refresh playlist art after everything is built
+	if state.Current.CurrentPlaylist != nil {
+		h.refreshPlaylistArt()
+	}
+
 	h.songTable.SetSelectedFunc(func(row, _ int) {
 		if row == 0 || state.Current.CurrentPlaylist == nil {
 			return
@@ -231,22 +236,26 @@ func (h *HomePage) buildPlaylistPanel() *tview.Flex {
 	h.contentPlaylistDrop.SetFieldTextColor(ui.ColorPrimary)
 	h.contentPlaylistDrop.SetPrefixTextColor(ui.ColorAccent)
 	h.contentPlaylistDrop.SetBackgroundColor(ui.ColorBackground)
-	h.refreshContentPlaylistDrop()
 
 	h.playlistArtView = tview.NewTextView()
 	h.playlistArtView.SetDynamicColors(true)
 	h.playlistArtView.SetBackgroundColor(ui.ColorBackground)
 	h.playlistArtView.SetTextAlign(tview.AlignCenter)
-	h.refreshPlaylistArt()
 
 	h.playlistInfoView = tview.NewTextView()
 	h.playlistInfoView.SetDynamicColors(true)
 	h.playlistInfoView.SetBackgroundColor(ui.ColorBackground)
-	h.refreshPlaylistInfo()
 
 	h.controlBar = tview.NewTextView()
 	h.controlBar.SetDynamicColors(true)
 	h.controlBar.SetBackgroundColor(ui.ColorBackground)
+
+	// Initialize dropdown and refresh art after components are created
+	h.refreshContentPlaylistDrop()
+	if state.Current.CurrentPlaylist != nil {
+		h.refreshPlaylistArt()
+		h.refreshPlaylistInfo()
+	}
 	h.controlBar.SetText(
 		"\n[#1DB954]🔒[-] [#B3B3B3]Encrypt[-]  [#1DB954]🔀[-] [#B3B3B3]Shuffle[-]\n[#1DB954]▶[-] [#B3B3B3]Play[-]    [#1DB954]⬇[-] [#B3B3B3]Download[-]",
 	)
@@ -269,6 +278,9 @@ func (h *HomePage) buildPlaylistPanel() *tview.Flex {
 // ── Song Table ────────────────────────────────────────────────────────────────
 
 func (h *HomePage) buildSongTable() {
+	if h.songTable == nil {
+		return
+	}
 	t := h.songTable
 	t.Clear()
 
@@ -508,7 +520,7 @@ func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyBacktab:
 		h.cycleFocus(-1)
 		return nil
-	case tcell.KeyCtrlI:
+	case tcell.KeyEnter:
 		// Same as Tab in home context
 		h.cycleFocus(1)
 		return nil
@@ -664,7 +676,7 @@ func (h *HomePage) openLocalFileDialog() {
 	dialog := centeredFlex(inner, 70, 10)
 	dialog.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case tcell.KeyEnter, tcell.KeyCtrlI:
+		case tcell.KeyEnter:
 			path := strings.TrimSpace(input.GetText())
 			if path == "" {
 				errView.SetText("[#FF4444]  Path required[-]")
@@ -736,17 +748,25 @@ func (h *HomePage) refreshContentPlaylistDrop() {
 	h.contentPlaylistDrop.SetOptions(opts, func(text string, idx int) {
 		if state.Current.CurrentProfile != nil && idx < len(state.Current.CurrentProfile.Playlists) {
 			state.Current.CurrentPlaylist = &state.Current.CurrentProfile.Playlists[idx]
-			h.refreshPlaylistArt()
-			h.refreshPlaylistInfo()
-			h.buildSongTable()
+			if state.Current.CurrentPlaylist != nil {
+				h.refreshPlaylistArt()
+				h.refreshPlaylistInfo()
+				h.buildSongTable()
+			}
 		}
 	})
-	h.contentPlaylistDrop.SetCurrentOption(0)
+	if len(opts) > 0 {
+		h.contentPlaylistDrop.SetCurrentOption(0)
+	}
 }
 
 func (h *HomePage) refreshPlaylistArt() {
+	if state.Current.CurrentPlaylist == nil {
+		h.playlistArtView.SetText("[#B3B3B3]\n\n    ╔════════════╗\n    ║            ║\n    ║   [#1DB954]♫♫♫[-]       [#B3B3B3]║\n    ║            ║\n    ╚════════════╝[-]")
+		return
+	}
 	art := "[#B3B3B3]\n\n    ╔════════════╗\n    ║            ║\n    ║   [#1DB954]♫♫♫[-]       [#B3B3B3]║\n    ║            ║\n    ╚════════════╝[-]"
-	if state.Current.CurrentPlaylist != nil && state.Current.CurrentPlaylist.ArtPath != "" {
+	if state.Current.CurrentPlaylist.ArtPath != "" {
 		art = "[#B3B3B3]\n  (playlist art loaded)\n  " + state.Current.CurrentPlaylist.ArtPath + "[-]"
 	}
 	h.playlistArtView.SetText(art)

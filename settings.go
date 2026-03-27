@@ -189,7 +189,7 @@ func (s *SettingsPage) refreshProfileDrop() {
 }
 
 func (s *SettingsPage) fillProfileFields() {
-	if state.Current.CurrentProfile == nil {
+	if state.Current.CurrentProfile == nil || s.avatarInput == nil || s.nameInput == nil || s.bioInput == nil {
 		return
 	}
 	p := state.Current.CurrentProfile
@@ -324,7 +324,7 @@ func (s *SettingsPage) refreshPlaylistDrop() {
 }
 
 func (s *SettingsPage) fillPlaylistFields() {
-	if state.Current.CurrentPlaylist == nil {
+	if state.Current.CurrentPlaylist == nil || s.artInput == nil || s.plNameInput == nil || s.plBioInput == nil {
 		return
 	}
 	pl := state.Current.CurrentPlaylist
@@ -421,7 +421,7 @@ func (s *SettingsPage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 			s.refreshTabBar()
 			return nil
 		}
-	case tcell.KeyCtrlI:
+	case tcell.KeyEnter:
 		s.saveProfile()
 		s.savePlaylist()
 		return nil

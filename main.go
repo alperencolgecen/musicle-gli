@@ -50,29 +50,37 @@ func main() {
 
 	pages := tview.NewPages()
 
-	// Instantiate all pages
-	setupPage := NewSetupWizard(app, pages)
-	homePage := NewHomePage(app, pages)
-	settingsPage := NewSettingsPage(app, pages)
+	// Check if first launch
+	if state.Current.IsFirstLaunch {
+		// Show setup wizard
+		setupPage := NewSetupWizard(app, pages)
+		pages.AddPage("setup", setupPage.Root(), true, true)
+		pages.AddPage("home", NewHomePage(app, pages).Root(), true, false)
+		pages.AddPage("settings", NewSettingsPage(app, pages).Root(), true, false)
+		app.SetRoot(pages, true).Run()
+	} else {
+		// Show home page directly
+		homePage := NewHomePage(app, pages)
+		settingsPage := NewSettingsPage(app, pages)
+		pages.AddPage("setup", NewSetupWizard(app, pages).Root(), true, false)
+		pages.AddPage("home", homePage.Root(), true, true)
+		pages.AddPage("settings", settingsPage.Root(), true, false)
 
-	pages.AddPage("setup", setupPage.Root(), true, true)
-	pages.AddPage("home", homePage.Root(), true, false)
-	pages.AddPage("settings", settingsPage.Root(), true, false)
-
-	// Global Esc key: from home/settings, show exit dialog
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			name, _ := pages.GetFrontPage()
-			if name == "home" || name == "settings" {
-				showExitDialog(app, pages)
-				return nil
+		// Global Esc key: from home/settings, show exit dialog
+		app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if event.Key() == tcell.KeyEsc {
+				name, _ := pages.GetFrontPage()
+				if name == "home" || name == "settings" {
+					showExitDialog(app, pages)
+					return nil
+				}
 			}
-		}
-		return event
-	})
+			return event
+		})
 
-	if err := app.SetRoot(pages, true).Run(); err != nil {
-		panic(err)
+		if err := app.SetRoot(pages, true).Run(); err != nil {
+			panic(err)
+		}
 	}
 
 	bridge.StopAll()

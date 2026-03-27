@@ -157,7 +157,7 @@ func (sw *SetupWizard) buildStep1() {
 
 	page := centeredFlex(inner, 60, 18)
 	page.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyCtrlI || event.Key() == tcell.KeyEnter {
+		if event.Key() == tcell.KeyEnter {
 			state.Current.Language = sw.lang
 			sw.buildStep2()
 			return nil
@@ -238,7 +238,7 @@ func (sw *SetupWizard) buildStep2() {
 
 	page.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case tcell.KeyCtrlI:
+		case tcell.KeyEnter:
 			onNext()
 			return nil
 		case tcell.KeyF2:
@@ -331,7 +331,7 @@ func (sw *SetupWizard) buildStep3() {
 			focusIdx = (focusIdx - 1 + len(inputs)) % len(inputs)
 			sw.app.SetFocus(inputs[focusIdx])
 			return nil
-		case tcell.KeyCtrlI:
+		case tcell.KeyEnter:
 			onNext()
 			return nil
 		case tcell.KeyEsc:
@@ -421,7 +421,7 @@ func (sw *SetupWizard) buildStep4() {
 			focusIdx = (focusIdx - 1 + len(inputs)) % len(inputs)
 			sw.app.SetFocus(inputs[focusIdx])
 			return nil
-		case tcell.KeyCtrlI:
+		case tcell.KeyEnter:
 			onNext()
 			return nil
 		case tcell.KeyEsc:
