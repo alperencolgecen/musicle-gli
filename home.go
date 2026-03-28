@@ -163,14 +163,11 @@ func (h *HomePage) buildSidebar() *tview.Flex {
 	sidebar.SetBackgroundColor(ui.ColorBackground)
 	sidebar.SetBorder(true)
 	sidebar.SetBorderColor(ui.ColorBorder)
-	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
 	sidebar.AddItem(h.sidebarTitle, 1, 0, false)
-	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
 	sidebar.AddItem(h.spotifyInput, 1, 0, true)
-	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
 	sidebar.AddItem(h.youtubeInput, 1, 0, false)
-	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
 	sidebar.AddItem(h.localBtn, 1, 0, false)
+	sidebar.AddItem(h.playlistDropdown, 1, 0, false)
 	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
 	sidebar.AddItem(h.playlistDropdown, 1, 0, false)
 	sidebar.AddItem(tview.NewBox().SetBackgroundColor(ui.ColorBackground), 1, 0, false)
@@ -512,7 +509,41 @@ func (h *HomePage) playNextSong() {
 
 // ── Key handler ───────────────────────────────────────────────────────────────
 
+var lastKeyTime time.Time
+var lastKey rune = 0
+
 func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
+	// 1. Ctrl+C'yi tamamen engelle - kapatmasın diye
+	if event.Key() == tcell.KeyCtrlC {
+		return nil
+	}
+
+	// 2. Key repeat'i sınırla
+	now := time.Now()
+
+	// Silme tuşları için 100ms, diğerleri için 500ms
+	if event.Rune() == lastKey {
+		var timeout time.Duration
+		if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyDelete || event.Key() == tcell.KeyBackspace2 {
+			timeout = 100 * time.Millisecond // Silme tuşları için hızlı
+		} else {
+			timeout = 760 * time.Millisecond // Diğer tuşlar için yavaş
+		}
+
+		if now.Sub(lastKeyTime) < timeout {
+			return nil
+		}
+	}
+
+	// Key up/down event'lerini engelle (basılı tuttuğunda gelenler)
+	if event.Rune() == 0 && now.Sub(lastKeyTime) < 50*time.Millisecond {
+		return nil
+	}
+
+	lastKeyTime = now
+	lastKey = event.Rune()
+
+	// 2. Özel tuşları engelleme (silme, yön tuşları vb.)
 	switch event.Key() {
 	case tcell.KeyTab:
 		h.cycleFocus(1)
@@ -524,19 +555,6 @@ func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		// Same as Tab in home context
 		h.cycleFocus(1)
 		return nil
-	}
-
-	switch event.Rune() {
-	case ' ':
-		h.togglePlayPause()
-		return nil
-	case 's', 'S':
-		// Settings shortcut
-		h.openSettings()
-		return nil
-	}
-
-	switch event.Key() {
 	case tcell.KeyRight:
 		go bridge.PlayerCall(bridge.Action{Action: "seek", Value: 5})
 		return nil
@@ -545,8 +563,8 @@ func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case tcell.KeyUp:
 		v := state.Current.Player.Volume + 0.05
-		if v > 1.0 {
-			v = 1.0
+		if v > 1 {
+			v = 1
 		}
 		state.Current.Player.Volume = v
 		go bridge.PlayerCall(bridge.Action{Action: "volume", Value: v})
@@ -559,8 +577,25 @@ func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		state.Current.Player.Volume = v
 		go bridge.PlayerCall(bridge.Action{Action: "volume", Value: v})
 		return nil
+	case tcell.KeyCtrlV:
+		// Ctrl+V - Paste from clipboard (geçici olarak devre dışı)
+		// TODO: Windows clipboard API entegrasyonu
+		return nil
+	case tcell.KeyCtrlC:
+		// Ctrl+C - Copy from current input (geçici olarak devre dışı)
+		// TODO: Windows clipboard API entegrasyonu
+		return nil
 	}
 
+	// 3. Sadece özel tuşları yakala, diğerlerini input'a bırak
+	switch event.Rune() {
+	case ' ':
+		h.togglePlayPause()
+		return nil
+		// 's' tuşu kaldırıldı - settings F2 ile açılacak
+	}
+
+	// 4. Diğer tüm tuşları input alanlarına bırak
 	return event
 }
 
