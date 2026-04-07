@@ -57,6 +57,25 @@ func main() {
 		pages.AddPage("setup", setupPage.Root(), true, true)
 		pages.AddPage("home", NewHomePage(app, pages).Root(), true, false)
 		pages.AddPage("settings", NewSettingsPage(app, pages).Root(), true, false)
+
+		// Block Ctrl+C globally during setup too
+		app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			// F1: Home page (if available)
+			if event.Key() == tcell.KeyF1 {
+				pages.SwitchToPage("home")
+				return nil
+			}
+			// F2: Settings page (if available)
+			if event.Key() == tcell.KeyF2 {
+				pages.SwitchToPage("settings")
+				return nil
+			}
+			if event.Key() == tcell.KeyCtrlC {
+				return nil // Prevent app termination
+			}
+			return event
+		})
+
 		app.SetRoot(pages, true).Run()
 	} else {
 		// Show home page directly
@@ -66,14 +85,28 @@ func main() {
 		pages.AddPage("home", homePage.Root(), true, true)
 		pages.AddPage("settings", settingsPage.Root(), true, false)
 
-		// Global Esc key: from home/settings, show exit dialog
+		// Global navigation keys and Esc key
 		app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			// F1: Home page
+			if event.Key() == tcell.KeyF1 {
+				pages.SwitchToPage("home")
+				return nil
+			}
+			// F2: Settings page
+			if event.Key() == tcell.KeyF2 {
+				pages.SwitchToPage("settings")
+				return nil
+			}
 			if event.Key() == tcell.KeyEsc {
 				name, _ := pages.GetFrontPage()
 				if name == "home" || name == "settings" {
 					showExitDialog(app, pages)
 					return nil
 				}
+			}
+			// Block Ctrl+C globally
+			if event.Key() == tcell.KeyCtrlC {
+				return nil // Prevent app termination
 			}
 			return event
 		})

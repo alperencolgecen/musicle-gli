@@ -48,6 +48,9 @@ type HomePage struct {
 
 	// Player polling
 	stopPoll chan struct{}
+
+	// Key repeat limiting
+	lastKeyTime time.Time
 }
 
 // NewHomePage creates the main dashboard
@@ -513,6 +516,11 @@ func (h *HomePage) playNextSong() {
 // ── Key handler ───────────────────────────────────────────────────────────────
 
 func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
+	// Block Ctrl+C to prevent app termination
+	if event.Key() == tcell.KeyCtrlC {
+		return nil // Prevent app from closing
+	}
+
 	switch event.Key() {
 	case tcell.KeyTab:
 		h.cycleFocus(1)
@@ -534,6 +542,17 @@ func (h *HomePage) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		// Settings shortcut
 		h.openSettings()
 		return nil
+	}
+
+	// Key repeat limiting for volume and seek controls (1000ms delay)
+	switch event.Key() {
+	case tcell.KeyRight, tcell.KeyLeft, tcell.KeyUp, tcell.KeyDown:
+		// Time-based limiting to prevent rapid repeats
+		now := time.Now()
+		if now.Sub(h.lastKeyTime) < 1000*time.Millisecond {
+			return event // Ignore the key if it's too soon
+		}
+		h.lastKeyTime = now
 	}
 
 	switch event.Key() {

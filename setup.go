@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"time"
 
 	"musicle-cli/state"
 	"musicle-cli/ui"
@@ -56,6 +57,32 @@ func makeInput(label, placeholder string) *tview.InputField {
 	f.SetFieldTextColor(ui.ColorPrimary)
 	f.SetPlaceholderStyle(tcell.StyleDefault.Foreground(ui.ColorSecondary))
 	f.SetBackgroundColor(ui.ColorBackground)
+
+	// Re-enable Ctrl+C and Ctrl+V functions
+	lastInputTime := time.Time{}
+	f.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Block F1/F2 in input fields to prevent accidental navigation
+		if event.Key() == tcell.KeyF1 || event.Key() == tcell.KeyF2 {
+			return nil // Block navigation keys while typing
+		}
+
+		// Allow copy/paste shortcuts
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			switch event.Key() {
+			case tcell.KeyCtrlC, tcell.KeyCtrlV, tcell.KeyCtrlX:
+				return event // Let terminal handle copy/paste
+			}
+		}
+
+		// Time-based limiting for regular typing only
+		now := time.Now()
+		if now.Sub(lastInputTime) < 200*time.Millisecond && event.Modifiers() == 0 {
+			return nil // Block rapid character repeats
+		}
+		lastInputTime = now
+		return event
+	})
+
 	return f
 }
 
