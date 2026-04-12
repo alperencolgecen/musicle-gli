@@ -1,3 +1,4 @@
+// MusicLe CLI - Terminal Music Player
 package main
 
 import (
